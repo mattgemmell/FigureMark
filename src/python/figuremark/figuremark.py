@@ -141,42 +141,13 @@ def convert(text):
 		block_attributes = block_match.group(3) 
 		processed_block = block_match.group(4)
 		
-		# Process any embedded figure-marking spans.
-		last_span_end = 0
-		span_match = span_pattern_obj.search(processed_block, last_span_end)
-		while span_match:
-			processed_span = ""
-			bracketed_text = span_match.group(1) if span_match.group(1) else ""
-			if span_match.group(3):
-				# Reference number without bracketed span.
-				ref_num = span_match.group(3)
-				processed_span = f'<span class="{FMAttributes.shared_class} reference reference-{ref_num}">{ref_num}</span>'
-				
-			elif span_match.group(2) in marks_map:
-				# Known directive span.
-				css_class = marks_map[span_match.group(2)]
-				processed_span = f'<span class="{FMAttributes.shared_class} {css_class}">{bracketed_text}</span>'
-				
-			else:
-				# Parse as an attribute list.
-				span_attrs = FMAttributes(span_match.group(2))
-				processed_span = f'<span{span_attrs}>{bracketed_text}</span>'
-			
-			last_span_end = span_match.start() + len(processed_span)
-			processed_block = processed_block[:span_match.start()] + processed_span + processed_block[span_match.end():]
-			span_match = span_pattern_obj.search(processed_block, last_span_end)
-		
 		# Sync figure number with any intervening non-FigureMark figures.
 		other_figures = re.findall(r"(?sm)<figure[^>]*>.+?</figure>", text[last_fig_end:block_match.start()])
 		if other_figures:
 			figure_number += len(other_figures)
 		figure_number += 1
 		
-		# Assemble a suitable pre-formatted figure block.
-		
-		# Remove escaping backslashes from brackets and braces.
-		processed_block = re.sub(r"(?<!\\)\\([\[\]\{\}\\])", r"\1", processed_block)
-		processed_block = f"<div class=\"figure-content\">{processed_block}</div>"
+		# Process attributes.
 		attrs = FMAttributes(block_attributes)
 		if not attrs.tag_id:
 			attrs.tag_id = f"figure-{figure_number}"
@@ -209,6 +180,36 @@ def convert(text):
 		link_caption = attrs.directives.get(FMAttributes.link_caption, "num") # | title | all | none
 		retain_block = attrs.directives.get(FMAttributes.retain_block, "none") # | comment | indent
 		
+		# Process any embedded figure-marking spans.
+		last_span_end = 0
+		span_match = span_pattern_obj.search(processed_block, last_span_end)
+		while span_match:
+			processed_span = ""
+			bracketed_text = span_match.group(1) if span_match.group(1) else ""
+			if span_match.group(3):
+				# Reference number without bracketed span.
+				ref_num = span_match.group(3)
+				processed_span = f'<span class="{FMAttributes.shared_class} reference reference-{ref_num}">{ref_num}</span>'
+				
+			elif span_match.group(2) in marks_map:
+				# Known directive span.
+				css_class = marks_map[span_match.group(2)]
+				processed_span = f'<span class="{FMAttributes.shared_class} {css_class}">{bracketed_text}</span>'
+				
+			else:
+				# Parse as an attribute list.
+				span_attrs = FMAttributes(span_match.group(2))
+				processed_span = f'<span{span_attrs}>{bracketed_text}</span>'
+			
+			last_span_end = span_match.start() + len(processed_span)
+			processed_block = processed_block[:span_match.start()] + processed_span + processed_block[span_match.end():]
+			span_match = span_pattern_obj.search(processed_block, last_span_end)
+		
+		# Remove escaping backslashes from brackets and braces.
+		processed_block = re.sub(r"(?<!\\)\\([\[\]\{\}\\])", r"\1", processed_block)
+		processed_block = f"<div class=\"figure-content\">{processed_block}</div>"
+		
+		# Assemble a suitable pre-formatted figure block.
 		if block_title != "" or empty_captions:
 			link_tag = f"<a href=\"#{attrs.tag_id}\">"
 			caption_string = f"<figcaption><span class=\"figure-number\">{link_tag}{fig_num_format}</a></span><span class=\"figure-title\">{block_title}</span></figcaption>"

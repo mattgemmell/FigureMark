@@ -19,7 +19,7 @@ try:
 	
 	# Convert any FigureMark blocks.
 	file_contents = figuremark.convert(file_contents)
-	print(file_path)
+	
 	# Write out result to "-converted" file alongside original.
 	basename, sep, ext = file_path.partition(".")
 	output_filename = f"{basename}-converted{sep}{ext}"
