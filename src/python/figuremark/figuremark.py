@@ -7,11 +7,12 @@ import re
 
 class FMAttributes:
 	# Directives
-	fig_num_format = f"fig-num-format"
-	empty_captions = f"empty-captions"
-	caption_before = f"caption-before"
-	link_caption = f"link-caption"
-	retain_block = f"retain-block"
+	fig_num_format = "fig-num-format"
+	empty_captions = "empty-captions"
+	caption_before = "caption-before"
+	link_caption = "link-caption"
+	retain_block = "retain-block"
+	process_mode = "process-mode"
 	
 	# Magic
 	shared_class = "figuremark"
@@ -179,6 +180,10 @@ def convert(text):
 		caption_before = (attrs.directives.get(FMAttributes.caption_before, "true") == "true")
 		link_caption = attrs.directives.get(FMAttributes.link_caption, "num") # | title | all | none
 		retain_block = attrs.directives.get(FMAttributes.retain_block, "none") # | comment | indent
+		process_mode = attrs.directives.get(FMAttributes.process_mode, "transform") # | incept
+		
+		incept = (process_mode == "incept")
+		incept_span = f'<span class="{FMAttributes.shared_class} highlight">'
 		
 		# Process any embedded figure-marking spans.
 		last_span_end = 0
@@ -189,23 +194,68 @@ def convert(text):
 			if span_match.group(3):
 				# Reference number without bracketed span.
 				ref_num = span_match.group(3)
-				processed_span = f'<span class="{FMAttributes.shared_class} reference reference-{ref_num}">{ref_num}</span>'
+				if incept:
+					processed_span = f'{incept_span}{{</span>{span_match.group(3)}{incept_span}}}</span>'
+				else:
+					processed_span = f'<span class="{FMAttributes.shared_class} reference reference-{ref_num}">{ref_num}</span>'
 				
 			elif span_match.group(2) in marks_map:
 				# Known directive span.
 				css_class = marks_map[span_match.group(2)]
-				processed_span = f'<span class="{FMAttributes.shared_class} {css_class}">{bracketed_text}</span>'
+				if incept:
+					processed_span = f'{incept_span}[</span>{bracketed_text}{incept_span}]{{</span>{span_match.group(2)}{incept_span}}}</span>'
+				else:
+					processed_span = f'<span class="{FMAttributes.shared_class} {css_class}">{bracketed_text}</span>'
 				
 			else:
 				# Parse as an attribute list.
 				span_attrs = FMAttributes(span_match.group(2))
-				processed_span = f'<span{span_attrs}>{bracketed_text}</span>'
+				if incept:
+					processed_span = f'{incept_span}[</span>{bracketed_text}{incept_span}]{{</span>{span_match.group(2)}{incept_span}}}</span>'
+				else:
+					processed_span = f'<span{span_attrs}>{bracketed_text}</span>'
 			
 			last_span_end = span_match.start() + len(processed_span)
 			processed_block = processed_block[:span_match.start()] + processed_span + processed_block[span_match.end():]
 			span_match = span_pattern_obj.search(processed_block, last_span_end)
 		
-		# Remove escaping backslashes from brackets and braces.
+		# Handle incepted block delimiters.
+		if incept:
+			attrs.classes.append(process_mode)
+			block_lines = block_match[0].splitlines()
+			block_start_line = block_lines[0]
+			block_end_line = block_lines[-1]
+			
+			# The group block_match[2] is the title, and [3] is the attributes. Both are optional.
+			offset = block_match.start(0) # match indices are within the text as a whole.
+			whitespace = " \t"
+			incept_start = ""
+			if block_title and block_attributes:
+				incept_start = f"{incept_span}{block_start_line[:block_match.start(2)-offset]}</span>{block_start_line[block_match.start(2)-offset:block_match.start(3)-offset-1]}{incept_span}{block_start_line[block_match.start(3)-offset-1:block_match.end(3)-offset+1]}</span>{block_start_line[block_match.end(3)-offset+1:]}"
+			elif block_title and not block_attributes:
+				incept_start = f"{incept_span}{block_start_line[:block_match.start(2)-offset]}</span>{block_start_line[block_match.start(2)-offset:]}"
+			elif not block_title and block_attributes:
+				start_stripped = block_start_line[:block_match.start(3)-offset-1].rstrip(whitespace)
+				incept_start = f"{incept_span}{start_stripped}</span>{block_start_line[len(start_stripped):block_match.start(3)-offset-1]}{incept_span}{block_start_line[block_match.start(3)-offset-1:block_match.end(3)-offset+1]}</span>{block_start_line[block_match.end(3)-offset+1:]}"
+			else:
+				start_stripped = block_start_line.rstrip(whitespace)
+				incept_start = f"{incept_span}{start_stripped}</span>{block_start_line[len(start_stripped):]}"
+			
+			end_stripped = block_end_line.rstrip(whitespace)
+			incept_end = f"{incept_span}{end_stripped}</span>{block_end_line[len(end_stripped):]}"
+			no_html = re.sub(r"<.*?>", "", f"{incept_start}\n{processed_block}\n{incept_end}")
+			if block_match[0] != no_html:
+				print("Warning: imperfect inception (delta {len(no_html) - len(block_match[0])}). Please report this as a bug!")
+				print(f"\n\n##### Original:\n{block_match[0]}\n##### Processed:\n{processed_block}\n##### Tag-stripped:\n{no_html}\n#####")
+			
+			# Trim out the incept directive for display purposes.
+			directive_pattern = f":{FMAttributes.process_mode}=['\"]?{process_mode}['\"]?"
+			trim_pattern = rf"\s+{directive_pattern}|{directive_pattern}\s+|{directive_pattern}"
+			trimmed_incept_start = re.sub(trim_pattern, "", incept_start)
+			trimmed_incept_start = re.sub(rf"\s*{incept_span}{{\s*}}</span>\s*", "", trimmed_incept_start) # in case we've trimmed out the only attribute.
+			processed_block = f"{trimmed_incept_start}\n{processed_block}\n{incept_end}"
+			
+		# Remove escaping backslashes from brackets and braces (and from literal backslashes).
 		processed_block = re.sub(r"(?<!\\)\\([\[\]\{\}\\])", r"\1", processed_block)
 		processed_block = f"<div class=\"figure-content\">{processed_block}</div>"
 		

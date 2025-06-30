@@ -3,7 +3,7 @@
 This is the documentation for **FigureMark**, a simple syntax for marking up _figures_ in Markdown documents (i.e. HTML `<figure>` blocks). Its purpose is to help with formatting explanatory content online and in digital and printed books. It was created by [Matt Gemmell](https://mattgemmell.scot).
 
 ```figuremark Hamlet — Act 3, Scene 1 {.poetry :caption-before=false #act3-scene1 :link-caption=title}
-[To be, or not to be]{!}, that is the question: {1}
+[To be, or not to be]{!}, that is the [question]{question}: {1}
 Whether 'tis nobler in the mind to suffer
 The slings and arrows of [outrageous]{+} fortune,
 Or to take arms against a sea of troubles
