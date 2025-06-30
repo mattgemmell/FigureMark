@@ -2,9 +2,12 @@
 
 This is [the repository for **FigureMark**](https://github.com/mattgemmell/FigureMark), a simple syntax for marking up _figures_ in Markdown documents (i.e. HTML `<figure>` blocks). Its purpose is to help with formatting explanatory content online and in digital and printed books. It was created by [Matt Gemmell](https://mattgemmell.scot), and is made available under the [GPL-3.0 license](https://www.gnu.org/licenses/gpl-3.0.en.html).
 
-Since github doesn't allow the use of custom CSS in hosted README files like this one, please **[read the FigureMark documentation here](https://mattgemmell.scot/figuremark)** for illustrated examples, syntax, etc.
+Feature requests, bug reports, and general discussion are welcomed; you can [use the issue tracker here](https://github.com/mattgemmell/FigureMark/issues).
 
-Feature requests, bug reports, and general discussion are welcomed; you can [find my contact details here](https://mattgemmell.scot/contact/).
+
+## Documentation
+
+Since github doesn't allow the use of custom CSS in hosted README files like this one, please **[read the FigureMark documentation here](https://mattgemmell.scot/figuremark)** for illustrated examples, syntax, etc.
 
 
 ## Purpose
