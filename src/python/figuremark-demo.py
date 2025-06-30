@@ -12,13 +12,14 @@ if len(sys.argv) > 1:
 
 try:
 	# Open and read file.
-	input_file = open(os.path.abspath(file_path), 'r')
+	file_path = os.path.abspath(file_path)
+	input_file = open(file_path, 'r')
 	file_contents = input_file.read()
 	input_file.close()
 	
 	# Convert any FigureMark blocks.
 	file_contents = figuremark.convert(file_contents)
-	sys.exit(0)
+	print(file_path)
 	# Write out result to "-converted" file alongside original.
 	basename, sep, ext = file_path.partition(".")
 	output_filename = f"{basename}-converted{sep}{ext}"
