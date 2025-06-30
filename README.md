@@ -6,7 +6,6 @@ Since github doesn't allow the use of custom CSS in hosted README files like thi
 
 Feature requests, bug reports, and general discussion are welcomed; you can [find my contact details here](https://mattgemmell.scot/contact/).
 
----
 
 ## Purpose
 
