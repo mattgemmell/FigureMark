@@ -14,8 +14,18 @@ class FMAttributes:
 	retain_block = "retain-block"
 	process_mode = "process-mode"
 	
+	known_directives = {
+		fig_num_format,
+		empty_captions,
+		caption_before,
+		link_caption,
+		retain_block,
+		process_mode
+	}
+	
 	# Magic
 	shared_class = "figuremark"
+	attributed_class = "attributed"
 	directive_prefix = ":"
 	remove_token = f"-{directive_prefix}"
 	
@@ -43,6 +53,9 @@ class FMAttributes:
 						dest = self.directives
 						# Trim off the directive_prefix.
 						this_key = this_key[len(FMAttributes.directive_prefix):]
+						if not this_key in FMAttributes.known_directives:
+							print(f"Warning: Unknown directive '{FMAttributes.directive_prefix}{this_key}'. Ignoring.")
+							continue
 					dest[this_key] = val.strip('"\'')
 				else:
 					split_classes = item.split(".")
@@ -195,7 +208,7 @@ def convert(text):
 				# Reference number without bracketed span.
 				ref_num = span_match.group(3)
 				if incept:
-					processed_span = f'{incept_span}{{</span>{span_match.group(3)}{incept_span}}}</span>'
+					processed_span = f'<span class="{FMAttributes.shared_class} reference reference-{ref_num}">{{</span>{span_match.group(3)}<span class="{FMAttributes.shared_class} reference reference-{ref_num}">}}</span>'
 				else:
 					processed_span = f'<span class="{FMAttributes.shared_class} reference reference-{ref_num}">{ref_num}</span>'
 				
@@ -203,15 +216,16 @@ def convert(text):
 				# Known directive span.
 				css_class = marks_map[span_match.group(2)]
 				if incept:
-					processed_span = f'{incept_span}[</span>{bracketed_text}{incept_span}]{{</span>{span_match.group(2)}{incept_span}}}</span>'
+					processed_span = f'<span class="{FMAttributes.shared_class} {css_class}">[</span>{bracketed_text}<span class="{FMAttributes.shared_class} {css_class}">]{{</span>{span_match.group(2)}<span class="{FMAttributes.shared_class} {css_class}">}}</span>'
 				else:
 					processed_span = f'<span class="{FMAttributes.shared_class} {css_class}">{bracketed_text}</span>'
 				
 			else:
 				# Parse as an attribute list.
 				span_attrs = FMAttributes(span_match.group(2))
+				span_attrs.classes.append(FMAttributes.attributed_class)
 				if incept:
-					processed_span = f'{incept_span}[</span>{bracketed_text}{incept_span}]{{</span>{span_match.group(2)}{incept_span}}}</span>'
+					processed_span = f'<span{span_attrs}>[</span>{bracketed_text}<span{span_attrs}>]{{</span>{span_match.group(2)}<span{span_attrs}>}}</span>'
 				else:
 					processed_span = f'<span{span_attrs}>{bracketed_text}</span>'
 			
@@ -254,7 +268,14 @@ def convert(text):
 			trimmed_incept_start = re.sub(trim_pattern, "", incept_start)
 			trimmed_incept_start = re.sub(rf"\s*{incept_span}{{\s*}}</span>\s*", "", trimmed_incept_start) # in case we've trimmed out the only attribute.
 			processed_block = f"{trimmed_incept_start}\n{processed_block}\n{incept_end}"
-			
+		
+		# Add line-spans.
+		processed_lines = ""
+		line_span = f'<span class="{FMAttributes.shared_class} line">'
+		for line in processed_block.splitlines():
+			processed_lines = f"{processed_lines}{line_span}{line}</span>\n"
+		processed_block = processed_lines
+		
 		# Remove escaping backslashes from brackets and braces (and from literal backslashes).
 		processed_block = re.sub(r"(?<!\\)\\([\[\]\{\}\\])", r"\1", processed_block)
 		processed_block = f"<div class=\"figure-content\">{processed_block}</div>"
