@@ -260,7 +260,8 @@ def convert(text):
 			no_html = re.sub(r"<.*?>", "", f"{incept_start}\n{processed_block}\n{incept_end}")
 			if block_match[0] != no_html:
 				print("Warning: imperfect inception (delta {len(no_html) - len(block_match[0])}). Please report this as a bug!")
-				print(f"\n\n##### Original:\n{block_match[0]}\n##### Processed:\n{processed_block}\n##### Tag-stripped:\n{no_html}\n#####")
+				#print(f"\n\n##### Original:\n{block_match[0]}\n##### Processed:\n{incept_start}\n{processed_block}\n{incept_end}\n##### Tag-stripped:\n{no_html}\n#####")
+				print(f"\n\n##### Original:\n{block_match[0]}\n##### Tag-stripped:\n{no_html}\n#####")
 			
 			# Trim out the incept directive for display purposes.
 			directive_pattern = f":{FMAttributes.process_mode}=['\"]?{process_mode}['\"]?"
