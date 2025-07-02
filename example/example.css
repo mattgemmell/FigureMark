@@ -25,6 +25,13 @@ hr {
 	background-color: transparent;
 	border-bottom: 3px solid var(--figuremark);
 	width: 50%;
+}
+
+hr:after {
+	content: "";
+}
+
+hr, hr:after {
 	height: 2.5rem;
 }
 
@@ -135,6 +142,10 @@ figure figcaption:not(:has(.figure-title)) {
 	padding: 0.2rem 0.4rem;
 }
 
+.attributed {
+	color: blueviolet;
+}
+
 div.highlight, pre.highlight, .highlight code {
 	font-weight: normal;
 }
@@ -238,17 +249,18 @@ figure.quotation .figure-title:before {
 figure.quotation .figure-content {
 	white-space: pre-wrap;
 	text-align: justify;
-	sfont-style: italic;
 	line-height: 3rem;
 	padding-bottom: 1.5rem;
 }
 
 figure.quotation .figure-content:before {
-	content: "“"
+	content: "“";
 }
 
 figure.quotation .figure-content:after {
-	content: "”"
+	content: "”";
+	float: right;
+	margin-top: -3rem;
 }
 
 figure.quotation .figure-content:before, figure.quotation .figure-content:after {
@@ -267,6 +279,46 @@ figure.quotation .highlight {
 figure.quotation .insert {
 	color: fuchsia;
 	font-variant-caps: all-small-caps;
+}
+
+.incept .comment {
+	font-style: normal;
+	padding-left: 0;
+}
+
+.incept .comment:before {
+	content: "";
+}
+
+.incept .remove {
+	text-decoration: none;
+}
+
+.incept .result {
+	display: inline;
+}
+
+.incept .result:before {
+	content: "";
+}
+
+.incept span.figuremark:not(.line) {
+	font-weight: bold;
+}
+
+.incept .reference {
+	background-color: transparent;
+	color: #f60;
+	padding: 0;
+}
+
+figure.example .figure-content {
+	display: flex;
+	flex-direction: column;
+}
+
+figure.example:not(.incept) .line:has(> .reference) {
+	background-color: #fda;
 }
 
 @media (prefers-color-scheme: dark) {
