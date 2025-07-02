@@ -13,6 +13,7 @@ class FMAttributes:
 	link_caption = "link-caption"
 	retain_block = "retain-block"
 	process_mode = "process-mode"
+	incept_block = "incept-block"
 	
 	known_directives = {
 		fig_num_format,
@@ -20,7 +21,8 @@ class FMAttributes:
 		caption_before,
 		link_caption,
 		retain_block,
-		process_mode
+		process_mode,
+		incept_block
 	}
 	
 	# Magic
@@ -196,6 +198,7 @@ def convert(text):
 		link_caption = attrs.directives.get(FMAttributes.link_caption, "num") # | title | all | none
 		retain_block = attrs.directives.get(FMAttributes.retain_block, "none") # | comment | indent
 		process_mode = attrs.directives.get(FMAttributes.process_mode, "transform") # | incept
+		incept_block = attrs.directives.get(FMAttributes.incept_block, "content") # | all
 		
 		incept = (process_mode == "incept")
 		incept_span = f'<span class="{FMAttributes.shared_class} highlight">'
@@ -292,8 +295,12 @@ def convert(text):
 			directive_pattern = f":{FMAttributes.process_mode}=['\"]?{process_mode}['\"]?"
 			trim_pattern = rf"\s+{directive_pattern}|{directive_pattern}\s+|{directive_pattern}"
 			trimmed_incept_start = re.sub(trim_pattern, "", incept_start)
-			trimmed_incept_start = re.sub(rf"\s*{incept_span}{{\s*}}</span>\s*", "", trimmed_incept_start) # in case we've trimmed out the only attribute.
-			processed_block = f"{trimmed_incept_start}\n{processed_block}\n{incept_end}"
+			directive_pattern = f":{FMAttributes.incept_block}=['\"]?\\w+['\"]?"
+			trim_pattern = rf"\s+{directive_pattern}|{directive_pattern}\s+|{directive_pattern}"
+			trimmed_incept_start = re.sub(trim_pattern, "", trimmed_incept_start)
+			trimmed_incept_start = re.sub(rf"\s*{incept_span}{{\s*}}</span>\s*", "", trimmed_incept_start) # in case we've trimmed out all attributes.
+			if incept_block == "all":
+				processed_block = f"{trimmed_incept_start}\n{processed_block}\n{incept_end}"
 		
 		# Add line-spans.
 		processed_lines = ""

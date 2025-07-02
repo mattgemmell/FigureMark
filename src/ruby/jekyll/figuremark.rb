@@ -14,6 +14,7 @@ class FMAttributes
   LINK_CAPTION = "link-caption"
   RETAIN_BLOCK = "retain-block"
   PROCESS_MODE = "process-mode"
+  INCEPT_BLOCK = "incept-block"
 
   KNOWN_DIRECTIVES = Set[
     FIG_NUM_FORMAT,
@@ -21,7 +22,8 @@ class FMAttributes
     CAPTION_BEFORE,
     LINK_CAPTION,
     RETAIN_BLOCK,
-    PROCESS_MODE
+    PROCESS_MODE,
+    INCEPT_BLOCK
   ]
 
   # Magic
@@ -210,6 +212,7 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 			link_caption = attrs.directives[FMAttributes::LINK_CAPTION] || "num"
 			retain_block = attrs.directives[FMAttributes::RETAIN_BLOCK] || "none"
 			process_mode = attrs.directives[FMAttributes::PROCESS_MODE] || "transform"
+			incept_block = attrs.directives[FMAttributes::INCEPT_BLOCK] || "content"
 	
 			incept = (process_mode == "incept")
 			incept_span = %Q{<span class="#{FMAttributes::SHARED_CLASS} highlight">}
@@ -306,8 +309,13 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 				directive_pattern = %Q{:#{FMAttributes::PROCESS_MODE}=['"]?#{process_mode}['"]?}
 				trim_pattern = /(\s+#{directive_pattern}|#{directive_pattern}\s+|#{directive_pattern})/
 				trimmed_incept_start = incept_start.gsub(trim_pattern, "")
+				directive_pattern = %Q{:#{FMAttributes::INCEPT_BLOCK}=['"]?[a-z]+['"]?}
+				trim_pattern = /(\s+#{directive_pattern}|#{directive_pattern}\s+|#{directive_pattern})/
+				trimmed_incept_start = trimmed_incept_start.gsub(trim_pattern, "")
 				trimmed_incept_start = trimmed_incept_start.gsub(/\s*#{incept_span}{\s*}<\/span>\s*/, "")
-				processed_block = "#{trimmed_incept_start}\n#{processed_block}\n#{incept_end}"
+				if incept_block == "all"
+					processed_block = "#{trimmed_incept_start}\n#{processed_block}\n#{incept_end}"
+				end
 			end
 	
 			processed_lines = ""
