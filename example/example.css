@@ -306,6 +306,39 @@ figure.quotation .insert {
 	font-weight: bold;
 }
 
+.incept span.figuremark.implicit {
+	font-weight: normal;
+	text-decoration: underline;
+	text-decoration-style: dotted;
+	text-decoration-thickness: 0.15rem;
+	text-underline-offset: 0.2rem;
+}
+
+.incept .implicit:has(+ .highlight) {
+	text-decoration-color: #06f;
+}
+
+.incept .implicit:has(+ .insert) {
+	text-decoration-color: green;
+}
+
+.incept .implicit:has(+ .remove) {
+	text-decoration-color: red;
+}
+
+.incept .implicit:has(+ .comment) {
+	text-decoration-color: #999;
+}
+
+.incept .implicit:has(+ .result) {
+	text-decoration-color: #444;
+	background-color: #eee;
+}
+
+.incept .implicit:has(+ .attributed) {
+	text-decoration-color: blueviolet;
+}
+
 .incept .reference {
 	background-color: transparent;
 	color: #f60;

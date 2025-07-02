@@ -26,6 +26,7 @@ class FMAttributes:
 	# Magic
 	shared_class = "figuremark"
 	attributed_class = "attributed"
+	implicit_class = "implicit"
 	directive_prefix = ":"
 	remove_token = f"-{directive_prefix}"
 	
@@ -133,7 +134,8 @@ class FMAttributes:
 def convert(text):
 	fm_globals_pattern = r"(?mi)^(?:\{figure(?:mark)?\s*([^\}]*)\})\s*?$"
 	figure_block_pattern = r"(?mi)(?<!<!--\n)^(`{3,}|~{3,})\s*figure(?:mark)?(\s+[^\{]+?)?\s*(?:\{([^\}]*?)\})?\s*$\n([\s\S\n]*?)\n\1\s*?$"
-	figure_span_pattern = r"(?<!\\)\[(.+?)(?<!\\)\]\{([^\}]+?)\}|\{([\d.-]+)\}"
+	figure_span_pattern = r"(?<!\\)\[(.+?)(?<!\\)\]\{([^\}]+?)\}|\{([\d.-]+)\}|(\S+)\{([^\}]+)\}"
+	
 	marks_map = {	"+": "insert",
 								"-": "remove",
 								"/": "comment",
@@ -212,7 +214,7 @@ def convert(text):
 				else:
 					processed_span = f'<span class="{FMAttributes.shared_class} reference reference-{ref_num}">{ref_num}</span>'
 				
-			elif span_match.group(2) in marks_map:
+			elif span_match.group(2) and span_match.group(2) in marks_map:
 				# Known directive span.
 				css_class = marks_map[span_match.group(2)]
 				if incept:
@@ -220,7 +222,7 @@ def convert(text):
 				else:
 					processed_span = f'<span class="{FMAttributes.shared_class} {css_class}">{bracketed_text}</span>'
 				
-			else:
+			elif span_match.group(2):
 				# Parse as an attribute list.
 				span_attrs = FMAttributes(span_match.group(2))
 				span_attrs.classes.append(FMAttributes.attributed_class)
@@ -228,6 +230,29 @@ def convert(text):
 					processed_span = f'<span{span_attrs}>[</span>{bracketed_text}<span{span_attrs}>]{{</span>{span_match.group(2)}<span{span_attrs}>}}</span>'
 				else:
 					processed_span = f'<span{span_attrs}>{bracketed_text}</span>'
+				
+			elif span_match.group(5):
+				# Implicit span.
+				if span_match.group(5) in marks_map:
+					# Known directive.
+					css_class = marks_map[span_match.group(5)]
+					if incept:
+						implicit_attrs = FMAttributes()
+						implicit_attrs.classes.append(FMAttributes.implicit_class)
+						processed_span = f'<span{implicit_attrs}>{span_match.group(4)}</span><span class="{FMAttributes.shared_class} {css_class}">{{</span>{span_match.group(5)}<span class="{FMAttributes.shared_class} {css_class}">}}</span>'
+					else:
+						processed_span = f'<span class="{FMAttributes.shared_class} {css_class} {FMAttributes.implicit_class}">{span_match.group(4)}</span>'
+				else:
+					# Parse as an attribute list.
+					span_attrs = FMAttributes(span_match.group(5))
+					span_attrs.classes.append(FMAttributes.attributed_class)
+					if incept:
+						implicit_attrs = FMAttributes()
+						implicit_attrs.classes.append(FMAttributes.implicit_class)
+						processed_span = f'<span{implicit_attrs}>{span_match.group(4)}</span><span{span_attrs}>{{</span>{span_match.group(5)}<span{span_attrs}>}}</span>'
+					else:
+						span_attrs.classes.append(FMAttributes.implicit_class)
+						processed_span = f'<span{span_attrs}>{span_match.group(4)}</span>'
 			
 			last_span_end = span_match.start() + len(processed_span)
 			processed_block = processed_block[:span_match.start()] + processed_span + processed_block[span_match.end():]
