@@ -27,6 +27,7 @@ class FMAttributes
   # Magic
   SHARED_CLASS = "figuremark"
   ATTRIBUTED_CLASS = "attributed"
+  IMPLICIT_CLASS = "implicit"
   DIRECTIVE_PREFIX = ":"
   REMOVE_TOKEN = "-#{DIRECTIVE_PREFIX}"
 
@@ -154,7 +155,7 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 		
 		fm_globals_pattern = /^(?:\{figure(?:mark)?\s*([^\}]*)\})\s*?$/mi
 		figure_block_pattern = /(?<!<!--\n)^(`{3,}|~{3,})\s*figure(?:mark)?(\s+[^\{]+?)?\s*(?:\{([^\}]*?)\})?\s*$\n([\s\S\n]*?)\n\1\s*?$/mi
-		figure_span_pattern = /(?<!\\)\[(.+?)(?<!\\)\]\{([^\}]+?)\}|\{([\d.-]+)\}/
+		figure_span_pattern = /(?<!\\)\[(.+?)(?<!\\)\]\{([^\}]+?)\}|\{([\d.-]+)\}|(\S+)\{([^\}]+)\}/
 	
 		marks_map = {
 			"+" => "insert",
@@ -240,6 +241,31 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 					else
 						processed_span = %Q{<span#{span_attrs}>#{bracketed_text}</span>}
 					end
+				elsif span_match[5]
+					# Implicit span.
+					if marks_map[span_match[5]]
+						# Known directive.
+						css_class = marks_map[span_match[5]]
+						if incept
+							implicit_attrs = FMAttributes.new()
+							implicit_attrs.classes << FMAttributes::IMPLICIT_CLASS
+							processed_span = %Q{<span#{implicit_attrs}>#{span_match[4]}</span><span class="#{FMAttributes::SHARED_CLASS} #{css_class}">{</span>#{span_match[5]}<span class="#{FMAttributes::SHARED_CLASS} #{css_class}">}</span>}
+						else
+							processed_span = %Q{<span class="#{FMAttributes::SHARED_CLASS} #{css_class} #{FMAttributes::IMPLICIT_CLASS}">#{span_match[4]}</span>}
+						end
+					else
+						# Parse as an attribute list.
+						span_attrs = FMAttributes.new(span_match[5])
+						span_attrs.classes << FMAttributes::ATTRIBUTED_CLASS
+						if incept
+							implicit_attrs = FMAttributes.new()
+							implicit_attrs.classes << FMAttributes::IMPLICIT_CLASS
+							processed_span = %Q{<span#{implicit_attrs}>#{span_match[4]}</span><span#{span_attrs}>{</span>#{span_match[5]}<span#{span_attrs}>}</span>}
+						else
+							span_attrs.classes << FMAttributes::IMPLICIT_CLASS
+							processed_span = %Q{<span#{span_attrs}>#{span_match[4]}</span>}
+						end
+					end
 				end
 				processed_block = processed_block[0...span_match.begin(0)] + processed_span + processed_block[span_match.end(0)..-1]
 				last_span_end = span_match.begin(0) + processed_span.length
@@ -257,12 +283,12 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 				offset = block_match.begin(0)
 				incept_start = ""
 				if !block_title.empty? && block_attributes
-					incept_start = "#{incept_span}#{block_start_line[0..block_match.begin(2)-offset-1]}</span>#{block_start_line[block_match.begin(2)-offset..block_match.begin(3)-offset-1]}#{incept_span}#{block_start_line[block_match.begin(3)-offset..block_match.end(3)-offset+1]}</span>#{block_start_line[block_match.end(3)-offset+1..-1]}"
+					incept_start = "#{incept_span}#{block_start_line[0...block_match.begin(2)-offset]}</span>#{block_start_line[block_match.begin(2)-offset...block_match.begin(3)-offset-1]}#{incept_span}#{block_start_line[block_match.begin(3)-offset-1...block_match.end(3)-offset+1]}</span>#{block_start_line[block_match.end(3)-offset+1..-1]}"
 				elsif !block_title.empty?
-					incept_start = "#{incept_span}#{block_start_line[0..block_match.begin(2)-offset-1]}</span>#{block_start_line[block_match.begin(2)-offset..-1]}"
+					incept_start = "#{incept_span}#{block_start_line[0...block_match.begin(2)-offset]}</span>#{block_start_line[block_match.begin(2)-offset..-1]}"
 				elsif block_attributes
-					start_stripped = block_start_line[0..block_match.begin(3)-offset-1].rstrip
-					incept_start = "#{incept_span}#{start_stripped}</span>#{block_start_line[start_stripped.length..block_match.begin(3)-offset-2]}#{incept_span}#{block_start_line[block_match.begin(3)-offset..block_match.end(3)-offset+1]}</span>#{block_start_line[block_match.end(3)-offset+1..-1]}"
+					start_stripped = block_start_line[0...block_match.begin(3)-offset-1].rstrip
+					incept_start = "#{incept_span}#{start_stripped}</span>#{block_start_line[start_stripped.length...block_match.begin(3)-offset-1]}#{incept_span}#{block_start_line[block_match.begin(3)-offset-1...block_match.end(3)-offset+1]}</span>#{block_start_line[block_match.end(3)-offset+1..-1]}"
 				else
 					start_stripped = block_start_line.rstrip
 					incept_start = "#{incept_span}#{start_stripped}</span>#{block_start_line[start_stripped.length..-1]}"
