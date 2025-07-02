@@ -351,7 +351,7 @@ figure.example .figure-content {
 }
 
 figure.example:not(.incept) .line:has(> .reference) {
-	background-color: #fda;
+	/* background-color: #fda; */
 }
 
 @media (prefers-color-scheme: dark) {
