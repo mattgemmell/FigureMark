@@ -155,7 +155,7 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 		
 		fm_globals_pattern = /^(?:\{figure(?:mark)?\s*([^\}]*)\})\s*?$/mi
 		figure_block_pattern = /(?<!<!--\n)^(`{3,}|~{3,})\s*figure(?:mark)?(\s+[^\{]+?)?\s*(?:\{([^\}]*?)\})?\s*$\n([\s\S\n]*?)\n\1\s*?$/mi
-		figure_span_pattern = /(?<!\\)\[(.+?)(?<!\\)\]\{([^\}]+?)\}|\{([\d.-]+)\}|(\S+)\{([^\d\}]+)\}/
+		figure_span_pattern = /(?<!\\)\[(.+?)(?<!\\)\]\{([^\}]+?)\}|\{([\d.-]+)\}|([^\s\[\{]+)\{([^\d\}]+)\}/
 	
 		marks_map = {
 			"+" => "insert",
