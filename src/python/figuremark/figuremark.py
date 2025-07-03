@@ -14,6 +14,7 @@ class FMAttributes:
 	retain_block = "retain-block"
 	process_mode = "process-mode"
 	incept_block = "incept-block"
+	associative_spans = "associative-spans"
 	
 	known_directives = {
 		fig_num_format,
@@ -22,7 +23,8 @@ class FMAttributes:
 		link_caption,
 		retain_block,
 		process_mode,
-		incept_block
+		incept_block,
+		associative_spans
 	}
 	
 	# Magic
@@ -133,10 +135,20 @@ class FMAttributes:
 		self.directives = temp
 
 
+def display_encode(text):
+	text = re.sub('(?<!{)>', '&gt;', text)
+	return text.replace('<', '&lt;')
+
+
+def display_decode(text):
+	return text.replace('&lt;', '<').replace('&gt;', '>')
+
+
 def convert(text):
 	fm_globals_pattern = r"(?mi)^(?:\{figure(?:mark)?\s*([^\}]*)\})\s*?$"
 	figure_block_pattern = r"(?mi)(?<!<!--\n)^(`{3,}|~{3,})\s*figure(?:mark)?(\s+[^\{]+?)?\s*(?:\{([^\}]*?)\})?\s*$\n([\s\S\n]*?)\n\1\s*?$"
-	figure_span_pattern = r"(?<!\\)\[(.+?)(?<!\\)\]\{([^\}]+?)\}|\{([\d.-]+)\}|([^\s\[\{]+)\{([^\d\}]+)\}"
+	figure_span_pattern = r"(?<!\\)\[(.+?)(?<!\\)\]\{([^\}]+?)\}|\{(\d[\d.-]*)\}|([^\s\[\{]+)\{([^\d\}]+)\}"
+	associative_pattern = r"((&lt;.*?&gt;|\(.*?\)|‘.*?’|“.*?”|\\\[.*?\\\]|\{.*?\})|([^\w\s\]\}])(.*?)\8)\{([^\}]+)\}" # must be |-appended to figure_span_pattern
 	
 	marks_map = {	"+": "insert",
 								"-": "remove",
@@ -146,7 +158,6 @@ def convert(text):
 	figure_number = 0
 	figs_processed = 0
 	block_pattern_obj = re.compile(figure_block_pattern)
-	span_pattern_obj = re.compile(figure_span_pattern)
 	last_fig_end = 0
 	global_attrs = FMAttributes()
 	
@@ -157,7 +168,7 @@ def convert(text):
 		if block_title:
 			block_title = block_title.strip()
 		block_attributes = block_match.group(3) 
-		processed_block = block_match.group(4)
+		processed_block = display_encode(block_match.group(4))
 		
 		# Sync figure number with any intervening non-FigureMark figures.
 		other_figures = re.findall(r"(?sm)<figure[^>]*>.+?</figure>", text[last_fig_end:block_match.start()])
@@ -199,9 +210,14 @@ def convert(text):
 		retain_block = attrs.directives.get(FMAttributes.retain_block, "none") # | comment | indent
 		process_mode = attrs.directives.get(FMAttributes.process_mode, "transform") # | incept
 		incept_block = attrs.directives.get(FMAttributes.incept_block, "content") # | all
+		associative_spans = (attrs.directives.get(FMAttributes.associative_spans, "true") == "true")
 		
 		incept = (process_mode == "incept")
 		incept_span = f'<span class="{FMAttributes.shared_class} highlight">'
+		
+		if associative_spans:
+			figure_span_pattern += r'|' + associative_pattern
+		span_pattern_obj = re.compile(figure_span_pattern)
 		
 		# Process any embedded figure-marking spans.
 		last_span_end = 0
@@ -234,28 +250,34 @@ def convert(text):
 				else:
 					processed_span = f'<span{span_attrs}>{bracketed_text}</span>'
 				
-			elif span_match.group(5):
-				# Implicit span.
-				if span_match.group(5) in marks_map:
+			elif span_match.group(5) or (associative_spans and span_match.group(10)):
+				# Implicit or associative span.
+				mark_type = span_match.group(5)
+				mark_text = span_match.group(4)
+				if associative_spans and span_match.group(10):
+					mark_type = span_match.group(10)
+					mark_text = span_match.group(6)
+				
+				if mark_type in marks_map:
 					# Known directive.
-					css_class = marks_map[span_match.group(5)]
+					css_class = marks_map[mark_type]
 					if incept:
 						implicit_attrs = FMAttributes()
 						implicit_attrs.classes.append(FMAttributes.implicit_class)
-						processed_span = f'<span{implicit_attrs}>{span_match.group(4)}</span><span class="{FMAttributes.shared_class} {css_class}">{{</span>{span_match.group(5)}<span class="{FMAttributes.shared_class} {css_class}">}}</span>'
+						processed_span = f'<span{implicit_attrs}>{mark_text}</span><span class="{FMAttributes.shared_class} {css_class}">{{</span>{mark_type}<span class="{FMAttributes.shared_class} {css_class}">}}</span>'
 					else:
-						processed_span = f'<span class="{FMAttributes.shared_class} {css_class} {FMAttributes.implicit_class}">{span_match.group(4)}</span>'
+						processed_span = f'<span class="{FMAttributes.shared_class} {css_class} {FMAttributes.implicit_class}">{mark_text}</span>'
 				else:
 					# Parse as an attribute list.
-					span_attrs = FMAttributes(span_match.group(5))
+					span_attrs = FMAttributes(mark_type)
 					span_attrs.classes.append(FMAttributes.attributed_class)
 					if incept:
 						implicit_attrs = FMAttributes()
 						implicit_attrs.classes.append(FMAttributes.implicit_class)
-						processed_span = f'<span{implicit_attrs}>{span_match.group(4)}</span><span{span_attrs}>{{</span>{span_match.group(5)}<span{span_attrs}>}}</span>'
+						processed_span = f'<span{implicit_attrs}>{mark_text}</span><span{span_attrs}>{{</span>{mark_type}<span{span_attrs}>}}</span>'
 					else:
 						span_attrs.classes.append(FMAttributes.implicit_class)
-						processed_span = f'<span{span_attrs}>{span_match.group(4)}</span>'
+						processed_span = f'<span{span_attrs}>{mark_text}</span>'
 			
 			last_span_end = span_match.start() + len(processed_span)
 			processed_block = processed_block[:span_match.start()] + processed_span + processed_block[span_match.end():]
@@ -286,6 +308,7 @@ def convert(text):
 			end_stripped = block_end_line.rstrip(whitespace)
 			incept_end = f"{incept_span}{end_stripped}</span>{block_end_line[len(end_stripped):]}"
 			no_html = re.sub(r"<.*?>", "", f"{incept_start}\n{processed_block}\n{incept_end}")
+			no_html = display_decode(no_html)
 			if block_match[0] != no_html:
 				print("Warning: imperfect inception (delta {len(no_html) - len(block_match[0])}). Please report this as a bug!")
 				#print(f"\n\n##### Original:\n{block_match[0]}\n##### Processed:\n{incept_start}\n{processed_block}\n{incept_end}\n##### Tag-stripped:\n{no_html}\n#####")

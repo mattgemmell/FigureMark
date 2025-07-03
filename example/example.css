@@ -84,6 +84,10 @@ figure.example {
 	padding-bottom: 1rem;
 }
 
+figure.example .line {
+	min-height: 2rem;
+}
+
 figure.example, figure.example figcaption {
 	border-bottom: 2px solid var(--figuremark);
 }
@@ -143,7 +147,7 @@ figure figcaption:not(:has(.figure-title)) {
 }
 
 .attributed {
-	color: blueviolet;
+	color: mediumorchid;
 }
 
 div.highlight, pre.highlight, .highlight code {
@@ -336,7 +340,7 @@ figure.quotation .insert {
 }
 
 .incept .implicit:has(+ .attributed) {
-	text-decoration-color: blueviolet;
+	text-decoration-color: mediumorchid;
 }
 
 .incept .reference {

@@ -15,6 +15,7 @@ class FMAttributes
   RETAIN_BLOCK = "retain-block"
   PROCESS_MODE = "process-mode"
   INCEPT_BLOCK = "incept-block"
+  ASSOCIATIVE_SPANS = "associative-spans"
 
   KNOWN_DIRECTIVES = Set[
     FIG_NUM_FORMAT,
@@ -23,7 +24,8 @@ class FMAttributes
     LINK_CAPTION,
     RETAIN_BLOCK,
     PROCESS_MODE,
-    INCEPT_BLOCK
+    INCEPT_BLOCK,
+    ASSOCIATIVE_SPANS
   ]
 
   # Magic
@@ -152,13 +154,24 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 	end
 	next unless proceed
 	
-		def convert(doc)
+	def display_encode(text)
+		text = text.gsub(/(?<!{)>/, '&gt;')
+		return text.gsub('<', '&lt;')
+	end
+
+	def display_decode(text)
+		text = text.gsub('&lt;', '<')
+		return text.gsub('&gt;', '>')
+	end
+
+	def convert(doc)
 		text = doc.content
 		
 		fm_globals_pattern = /^(?:\{figure(?:mark)?\s*([^\}]*)\})\s*?$/mi
 		figure_block_pattern = /(?<!<!--\n)^(`{3,}|~{3,})\s*figure(?:mark)?(\s+[^\{]+?)?\s*(?:\{([^\}]*?)\})?\s*$\n([\s\S\n]*?)\n\1\s*?$/mi
-		figure_span_pattern = /(?<!\\)\[(.+?)(?<!\\)\]\{([^\}]+?)\}|\{([\d.-]+)\}|([^\s\[\{]+)\{([^\d\}]+)\}/
-	
+		figure_span_pattern = /(?<!\\)\[(.+?)(?<!\\)\]\{([^\}]+?)\}|\{(\d[\d.-]*)\}|([^\s\[\{]+)\{([^\d\}]+)\}/
+		associative_pattern = /(?<!\\)\[(.+?)(?<!\\)\]\{([^\}]+?)\}|\{(\d[\d.-]*)\}|([^\s\[\{]+)\{([^\d\}]+)\}|((&lt;.*?&gt;|\(.*?\)|‘.*?’|“.*?”|\\\[.*?\\\]|\{.*?\})|([^\w\s\]\}])(.*?)\8)\{([^\}]+)\}/
+		
 		marks_map = {
 			"+" => "insert",
 			"-" => "remove",
@@ -169,7 +182,6 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 		figure_number = 0
 		figs_processed = 0
 		block_pattern_obj = figure_block_pattern
-		span_pattern_obj = figure_span_pattern
 		last_fig_end = 0
 		global_attrs = FMAttributes.new
 	
@@ -179,7 +191,7 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 		while block_match
 			block_title = block_match[2] ? block_match[2].strip : ""
 			block_attributes = block_match[3]
-			processed_block = block_match[4]
+			processed_block = display_encode(block_match[4])
 	
 			other_figures = text[last_fig_end...block_match.begin(0)].to_s.scan(/<figure[^>]*>.+?<\/figure>/m)
 			figure_number += other_figures.length
@@ -213,10 +225,16 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 			retain_block = attrs.directives[FMAttributes::RETAIN_BLOCK] || "none"
 			process_mode = attrs.directives[FMAttributes::PROCESS_MODE] || "transform"
 			incept_block = attrs.directives[FMAttributes::INCEPT_BLOCK] || "content"
-	
+			associative_spans = (attrs.directives.fetch(FMAttributes::ASSOCIATIVE_SPANS, "true") == "true")
+			
 			incept = (process_mode == "incept")
 			incept_span = %Q{<span class="#{FMAttributes::SHARED_CLASS} highlight">}
-	
+			
+			span_pattern_obj = figure_span_pattern
+			if associative_spans
+				span_pattern_obj = associative_pattern
+			end
+			
 			last_span_end = 0
 			span_match = span_pattern_obj.match(processed_block, last_span_end)
 			while span_match
@@ -244,29 +262,36 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 					else
 						processed_span = %Q{<span#{span_attrs}>#{bracketed_text}</span>}
 					end
-				elsif span_match[5]
-					# Implicit span.
-					if marks_map[span_match[5]]
+				elsif span_match[5] || (associative_spans && span_match[10])
+					# Implicit or associative span.
+					mark_type = span_match[5]
+					mark_text = span_match[4]
+					if associative_spans && span_match[10]
+						mark_type = span_match[10]
+						mark_text = span_match[6]
+					end
+					
+					if marks_map[mark_type]
 						# Known directive.
-						css_class = marks_map[span_match[5]]
+						css_class = marks_map[mark_type]
 						if incept
 							implicit_attrs = FMAttributes.new()
 							implicit_attrs.classes << FMAttributes::IMPLICIT_CLASS
-							processed_span = %Q{<span#{implicit_attrs}>#{span_match[4]}</span><span class="#{FMAttributes::SHARED_CLASS} #{css_class}">{</span>#{span_match[5]}<span class="#{FMAttributes::SHARED_CLASS} #{css_class}">}</span>}
+							processed_span = %Q{<span#{implicit_attrs}>#{mark_text}</span><span class="#{FMAttributes::SHARED_CLASS} #{css_class}">{</span>#{mark_type}<span class="#{FMAttributes::SHARED_CLASS} #{css_class}">}</span>}
 						else
-							processed_span = %Q{<span class="#{FMAttributes::SHARED_CLASS} #{css_class} #{FMAttributes::IMPLICIT_CLASS}">#{span_match[4]}</span>}
+							processed_span = %Q{<span class="#{FMAttributes::SHARED_CLASS} #{css_class} #{FMAttributes::IMPLICIT_CLASS}">#{mark_text}</span>}
 						end
 					else
 						# Parse as an attribute list.
-						span_attrs = FMAttributes.new(span_match[5])
+						span_attrs = FMAttributes.new(mark_type)
 						span_attrs.classes << FMAttributes::ATTRIBUTED_CLASS
 						if incept
 							implicit_attrs = FMAttributes.new()
 							implicit_attrs.classes << FMAttributes::IMPLICIT_CLASS
-							processed_span = %Q{<span#{implicit_attrs}>#{span_match[4]}</span><span#{span_attrs}>{</span>#{span_match[5]}<span#{span_attrs}>}</span>}
+							processed_span = %Q{<span#{implicit_attrs}>#{mark_text}</span><span#{span_attrs}>{</span>#{mark_type}<span#{span_attrs}>}</span>}
 						else
 							span_attrs.classes << FMAttributes::IMPLICIT_CLASS
-							processed_span = %Q{<span#{span_attrs}>#{span_match[4]}</span>}
+							processed_span = %Q{<span#{span_attrs}>#{mark_text}</span>}
 						end
 					end
 				end
@@ -300,6 +325,7 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 				end_stripped = block_end_line.rstrip
 				incept_end = "#{incept_span}#{end_stripped}</span>#{block_end_line[end_stripped.length..-1]}"
 				no_html = "#{incept_start}\n#{processed_block}\n#{incept_end}".gsub(/<.*?>/, "")
+				no_html = display_decode(no_html)
 				if block_match[0] != no_html
 					warn "Warning: imperfect inception (delta #{no_html.length - block_match[0].length}). Please report this as a bug!"
 					#warn "\n\n##### Original:\n#{block_match[0]}\n##### Processed:\n#{incept_start}\n#{processed_block}\n#{incept_end}\n##### Tag-stripped:\n#{no_html}\n#####"
