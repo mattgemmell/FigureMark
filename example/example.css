@@ -378,6 +378,10 @@ figure.example:not(.incept) .line:has(> .reference) {
 	figure.poetry .highlight {
 		color: mediumorchid;
 	}
+	
+	pre code {
+		color: #ccc;
+	}
 
 }
 
