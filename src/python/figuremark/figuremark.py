@@ -14,7 +14,8 @@ class FMAttributes:
 	retain_block = "retain-block"
 	process_mode = "process-mode"
 	incept_block = "incept-block"
-	associative_spans = "associative-spans"
+	associative_spans = "associative-spans",
+	numeric_ids = "numeric-ids"
 	
 	known_directives = {
 		fig_num_format,
@@ -24,7 +25,8 @@ class FMAttributes:
 		retain_block,
 		process_mode,
 		incept_block,
-		associative_spans
+		associative_spans,
+		numeric_ids
 	}
 	
 	# Magic
@@ -144,6 +146,20 @@ def display_decode(text):
 	return text.replace('&lt;', '<').replace('&gt;', '>')
 
 
+def string_to_slug(text):
+		# Remove non-alphanumeric characters
+    text = re.sub(r'\W+', ' ', text)
+		
+    # Replace whitespace runs with single hyphens
+    text = re.sub(r'\s+', '-', text)
+		
+    # Remove leading and trailing hyphens
+    text = text.strip('-')
+		
+    # Return in lowercase
+    return text.lower()
+
+
 def convert(text):
 	fm_globals_pattern = r"(?mi)^(?:\{figure(?:mark)?\s*([^\}]*)\})\s*?$"
 	figure_block_pattern = r"(?mi)(?<!<!--\n)^(`{3,}|~{3,})\s*figure(?:mark)?(\s+[^\{]+?)?\s*(?:\{([^\}]*?)\})?\s*$\n([\s\S\n]*?)\n\1\s*?$"
@@ -178,8 +194,6 @@ def convert(text):
 		
 		# Process attributes.
 		attrs = FMAttributes(block_attributes)
-		if not attrs.tag_id:
-			attrs.tag_id = f"figure-{figure_number}"
 		attrs.tag_attrs['data-fignum'] = f'{figure_number}'
 		
 		# Handle intervening globals blocks.
@@ -211,6 +225,14 @@ def convert(text):
 		process_mode = attrs.directives.get(FMAttributes.process_mode, "transform") # | incept
 		incept_block = attrs.directives.get(FMAttributes.incept_block, "content") # | all
 		associative_spans = (attrs.directives.get(FMAttributes.associative_spans, "true") == "true")
+		numeric_ids = (attrs.directives.get(FMAttributes.numeric_ids, "false") == "true")
+		
+		if not attrs.tag_id:
+			# ID not specified either globally or as a local override. Use defaults.
+			if not numeric_ids and block_title:
+				attrs.tag_id = string_to_slug(block_title)
+			else:
+				attrs.tag_id = f"figure-{figure_number}"
 		
 		incept = (process_mode == "incept")
 		incept_span = f'<span class="{FMAttributes.shared_class} highlight">'
@@ -310,7 +332,7 @@ def convert(text):
 			no_html = re.sub(r"<.*?>", "", f"{incept_start}\n{processed_block}\n{incept_end}")
 			no_html = display_decode(no_html)
 			if block_match[0] != no_html:
-				print("Warning: imperfect inception (delta {len(no_html) - len(block_match[0])}). Please report this as a bug!")
+				print(f"Warning: imperfect inception (delta {len(no_html) - len(block_match[0])}). Please report this as a bug!")
 				#print(f"\n\n##### Original:\n{block_match[0]}\n##### Processed:\n{incept_start}\n{processed_block}\n{incept_end}\n##### Tag-stripped:\n{no_html}\n#####")
 				print(f"\n\n##### Original:\n{block_match[0]}\n##### Tag-stripped:\n{no_html}\n#####")
 			

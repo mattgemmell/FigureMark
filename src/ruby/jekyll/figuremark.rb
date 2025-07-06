@@ -16,6 +16,7 @@ class FMAttributes
   PROCESS_MODE = "process-mode"
   INCEPT_BLOCK = "incept-block"
   ASSOCIATIVE_SPANS = "associative-spans"
+  NUMERIC_IDS = "numeric-ids"
 
   KNOWN_DIRECTIVES = Set[
     FIG_NUM_FORMAT,
@@ -25,7 +26,8 @@ class FMAttributes
     RETAIN_BLOCK,
     PROCESS_MODE,
     INCEPT_BLOCK,
-    ASSOCIATIVE_SPANS
+    ASSOCIATIVE_SPANS,
+    NUMERIC_IDS
   ]
 
   # Magic
@@ -164,6 +166,21 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 		return text.gsub('&gt;', '>')
 	end
 
+
+	def string_to_slug(text)
+		# Remove non-alphanumeric characters
+    text = text.gsub(/\W+/, ' ')
+		
+    # Replace whitespace runs with single hyphens
+    text = text.gsub(/\s+/, '-')
+		
+    # Remove leading and trailing hyphens
+    text = text.gsub(/^-*(.*?)-*$/, '\1')
+		
+    # Return in lowercase
+    return text.downcase
+  end
+
 	def convert(doc)
 		text = doc.content
 		
@@ -198,7 +215,6 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 			figure_number += 1
 	
 			attrs = FMAttributes.new(block_attributes)
-			attrs.tag_id ||= "figure-#{figure_number}"
 			attrs.tag_attrs['data-fignum'] = figure_number.to_s
 	
 			pre_match_text = text[0...block_match.begin(0)]
@@ -226,6 +242,16 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 			process_mode = attrs.directives[FMAttributes::PROCESS_MODE] || "transform"
 			incept_block = attrs.directives[FMAttributes::INCEPT_BLOCK] || "content"
 			associative_spans = (attrs.directives.fetch(FMAttributes::ASSOCIATIVE_SPANS, "true") == "true")
+			numeric_ids = (attrs.directives.fetch(FMAttributes::NUMERIC_IDS, "false") == "true")
+			
+			if !attrs.tag_id
+				# ID not specified either globally or as a local override. Use defaults.
+				if !numeric_ids && !block_title.empty?
+					attrs.tag_id = string_to_slug(block_title)
+				else
+					attrs.tag_id = "figure-#{figure_number}"
+				end
+			end
 			
 			incept = (process_mode == "incept")
 			incept_span = %Q{<span class="#{FMAttributes::SHARED_CLASS} highlight">}
