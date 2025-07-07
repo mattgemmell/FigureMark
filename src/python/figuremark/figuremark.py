@@ -15,7 +15,8 @@ class FMAttributes:
 	process_mode = "process-mode"
 	incept_block = "incept-block"
 	associative_spans = "associative-spans",
-	numeric_ids = "numeric-ids"
+	numeric_ids = "numeric-ids",
+	mark_types = "mark-types"
 	
 	known_directives = {
 		fig_num_format,
@@ -26,7 +27,8 @@ class FMAttributes:
 		process_mode,
 		incept_block,
 		associative_spans,
-		numeric_ids
+		numeric_ids,
+		mark_types
 	}
 	
 	# Magic
@@ -63,7 +65,25 @@ class FMAttributes:
 						if not this_key in FMAttributes.known_directives:
 							print(f"Warning: Unknown directive '{FMAttributes.directive_prefix}{this_key}'. Ignoring.")
 							continue
-					dest[this_key] = val.strip('"\'')
+					val = val.strip('"\'')
+					if dest == self.directives and this_key == FMAttributes.mark_types:
+						if not FMAttributes.mark_types in self.directives:
+							self.directives[FMAttributes.mark_types] = {}
+						# Split value into marks with class-lists.
+						these_marks = val.split(",")
+						for this_mark in these_marks:
+							if this_mark != FMAttributes.remove_token:
+								the_mark, _, the_classes_str = this_mark.partition(FMAttributes.directive_prefix)
+								if not the_mark in self.directives[FMAttributes.mark_types]:
+									self.directives[FMAttributes.mark_types][the_mark] = []
+								for the_class in the_classes_str.split("."):
+									if not the_class in self.directives[FMAttributes.mark_types][the_mark]:
+										self.directives[FMAttributes.mark_types][the_mark].append(the_class)
+							else:
+								if not this_mark in self.directives[FMAttributes.mark_types]:
+									self.directives[FMAttributes.mark_types] = {}
+					else:
+						dest[this_key] = val
 				else:
 					split_classes = item.split(".")
 					for this_class in split_classes:
@@ -107,7 +127,6 @@ class FMAttributes:
 				self.tag_attrs.clear()
 			else:
 				self.tag_attrs[k] = v
-		
 		for k, v in new_attrs.directives.items():
 			if v == FMAttributes.remove_token:
 				if k in self.directives:
@@ -226,6 +245,7 @@ def convert(text):
 		incept_block = attrs.directives.get(FMAttributes.incept_block, "content") # | all
 		associative_spans = (attrs.directives.get(FMAttributes.associative_spans, "true") == "true")
 		numeric_ids = (attrs.directives.get(FMAttributes.numeric_ids, "false") == "true")
+		mark_types = attrs.directives.get(FMAttributes.mark_types, {})
 		
 		if not attrs.tag_id:
 			# ID not specified either globally or as a local override. Use defaults.
@@ -255,9 +275,14 @@ def convert(text):
 				else:
 					processed_span = f'<span class="{FMAttributes.shared_class} reference reference-{ref_num}">{ref_num}</span>'
 				
-			elif span_match.group(2) and span_match.group(2) in marks_map:
+			elif span_match.group(2) and (span_match.group(2) in mark_types or span_match.group(2) in marks_map):
 				# Known directive span.
-				css_class = marks_map[span_match.group(2)]
+				css_class = None
+				if span_match.group(2) in mark_types:
+					css_class = " ".join(mark_types[span_match.group(2)])
+				else:
+					css_class = marks_map[span_match.group(2)]
+				
 				if incept:
 					processed_span = f'<span class="{FMAttributes.shared_class} {css_class}">[</span>{bracketed_text}<span class="{FMAttributes.shared_class} {css_class}">]{{</span>{span_match.group(2)}<span class="{FMAttributes.shared_class} {css_class}">}}</span>'
 				else:
@@ -280,9 +305,14 @@ def convert(text):
 					mark_type = span_match.group(10)
 					mark_text = span_match.group(6)
 				
-				if mark_type in marks_map:
+				if mark_type in mark_types or mark_type in marks_map:
 					# Known directive.
-					css_class = marks_map[mark_type]
+					css_class = None
+					if mark_type in mark_types:
+						css_class = " ".join(mark_types[mark_type])
+					else:
+						css_class = marks_map[mark_type]
+					
 					if incept:
 						implicit_attrs = FMAttributes()
 						implicit_attrs.classes.append(FMAttributes.implicit_class)

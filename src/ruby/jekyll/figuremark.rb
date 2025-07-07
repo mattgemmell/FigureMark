@@ -17,6 +17,7 @@ class FMAttributes
   INCEPT_BLOCK = "incept-block"
   ASSOCIATIVE_SPANS = "associative-spans"
   NUMERIC_IDS = "numeric-ids"
+  MARK_TYPES = "mark-types"
 
   KNOWN_DIRECTIVES = Set[
     FIG_NUM_FORMAT,
@@ -27,7 +28,8 @@ class FMAttributes
     PROCESS_MODE,
     INCEPT_BLOCK,
     ASSOCIATIVE_SPANS,
-    NUMERIC_IDS
+    NUMERIC_IDS,
+    MARK_TYPES
   ]
 
   # Magic
@@ -66,7 +68,35 @@ class FMAttributes
               next
             end
           end
-          dest[this_key] = val.gsub(/\A['"]|['"]\z/, "")
+          
+					val = val.gsub(/\A['"]|['"]\z/, "")
+					if dest == self.directives && this_key == MARK_TYPES
+						if !self.directives[MARK_TYPES]
+							self.directives[MARK_TYPES] = {}
+						end
+						# Split value into marks with class-lists.
+						these_marks = val.split(",")
+						these_marks.each do |this_mark|
+							if this_mark != REMOVE_TOKEN
+								the_mark, the_classes_str = this_mark.split(DIRECTIVE_PREFIX, 2)
+								if !self.directives[MARK_TYPES][the_mark]
+									self.directives[MARK_TYPES][the_mark] = []
+								end
+								the_classes_str.split(".").each do |the_class|
+									if !self.directives[MARK_TYPES][the_mark].include?(the_class)
+										self.directives[MARK_TYPES][the_mark] << the_class
+									end
+								end
+							else
+								if !self.directives[MARK_TYPES][this_mark]
+									self.directives[MARK_TYPES] = {}
+								end
+							end
+						end
+					else
+						dest[this_key] = val
+					end
+          
         else
           item.split('.').each do |this_class|
             @classes << this_class unless @classes.include?(this_class)
@@ -243,6 +273,7 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 			incept_block = attrs.directives[FMAttributes::INCEPT_BLOCK] || "content"
 			associative_spans = (attrs.directives.fetch(FMAttributes::ASSOCIATIVE_SPANS, "true") == "true")
 			numeric_ids = (attrs.directives.fetch(FMAttributes::NUMERIC_IDS, "false") == "true")
+			mark_types = attrs.directives.fetch(FMAttributes::MARK_TYPES, {})
 			
 			if !attrs.tag_id
 				# ID not specified either globally or as a local override. Use defaults.
@@ -267,14 +298,23 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 				processed_span = ""
 				bracketed_text = span_match[1] || ""
 				if span_match[3]
+					# Reference number without bracketed span.
 					ref_num = span_match[3]
 					if incept
 						processed_span = %Q{<span class="#{FMAttributes::SHARED_CLASS} reference reference-#{ref_num}">{</span>#{ref_num}<span class="#{FMAttributes::SHARED_CLASS} reference reference-#{ref_num}">}</span>}
 					else
 						processed_span = %Q{<span class="#{FMAttributes::SHARED_CLASS} reference reference-#{ref_num}">#{ref_num}</span>}
 					end
-				elsif span_match[2] && marks_map[span_match[2]]
-					css_class = marks_map[span_match[2]]
+				
+				elsif span_match[2] && (mark_types[span_match[2]] || marks_map[span_match[2]])
+					# Known directive span.
+					css_class = ""
+					if mark_types[span_match[2]]
+						css_class = mark_types[span_match[2]].join(" ")
+					else
+						css_class = marks_map[span_match[2]]
+					end
+					
 					if incept
 						processed_span = %Q{<span class="#{FMAttributes::SHARED_CLASS} #{css_class}">[</span>#{bracketed_text}<span class="#{FMAttributes::SHARED_CLASS} #{css_class}">]{</span>#{span_match[2]}<span class="#{FMAttributes::SHARED_CLASS} #{css_class}">}</span>}
 					else
@@ -297,9 +337,15 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 						mark_text = span_match[6]
 					end
 					
-					if marks_map[mark_type]
+					if mark_types[mark_type] || marks_map[mark_type]
 						# Known directive.
-						css_class = marks_map[mark_type]
+						css_class = ""
+						if mark_types[mark_type]
+							css_class = mark_types[mark_type].join(" ")
+						else
+							css_class = marks_map[mark_type]
+						end
+						
 						if incept
 							implicit_attrs = FMAttributes.new()
 							implicit_attrs.classes << FMAttributes::IMPLICIT_CLASS
