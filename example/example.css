@@ -352,6 +352,7 @@ figure.quotation .insert {
 figure.example .figure-content {
 	display: flex;
 	flex-direction: column;
+	margin: 1rem 0;
 }
 
 figure.example:not(.incept) .line:has(> .reference) {
