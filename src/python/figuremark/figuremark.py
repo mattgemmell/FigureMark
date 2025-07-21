@@ -185,8 +185,8 @@ def string_to_slug(text):
 def convert(text):
 	fm_globals_pattern = r"(?mi)^(?:\{figure(?:mark)?\s*([^\}]*)\})\s*?$"
 	figure_block_pattern = r"(?mi)(?<!<!--\n)^(`{3,}|~{3,})\s*figure(?:mark)?(\s+[^\{]+?)?\s*(?:\{([^\}]*?)\})?\s*$\n([\s\S\n]*?)\n\1\s*?$"
-	figure_span_pattern = r"(?<!\\)\[(.+?)(?<!\\)\]\{([^\}<]+?)\}|\{(\d[\d.-]*)\}|([^\s\[\{]+)\{([^\d\}<]+)\}"
-	associative_pattern = r"((&lt;.*?&gt;|\(.*?\)|‘.*?’|“.*?”|\\\[.*?\\\]|\{.*?\})|([^\w\s\]\}])(.*?)\8)\{([^\}<]+)\}" # must be |-appended to figure_span_pattern
+	figure_span_pattern = r"(?<!\\)\[(.+?)(?<!\\)\]\{([^\}<]+?)\}|\{(\d[\d.-]*)\}|([^\s\[\{]+)\{([^\d\}\]<]+)\}"
+	associative_pattern = r"((&lt;.*?&gt;|\(.*?\)|‘.*?’|“.*?”|\\\[.*?\\\]|\{.*?\})|([^\w\s\]\}\\])(.*?)\8)\{([^\}<]+)\}" # must be |-appended to figure_span_pattern
 	
 	marks_map = {	"+": "insert",
 								"-": "remove",
