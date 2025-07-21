@@ -35,6 +35,7 @@ class FMAttributes:
 	shared_class = "figuremark"
 	attributed_class = "attributed"
 	implicit_class = "implicit"
+	incepted_wrapper_class = "incepted-mark"
 	directive_prefix = ":"
 	remove_token = f"-{directive_prefix}"
 	
@@ -266,6 +267,8 @@ def convert(text):
 		span_match = span_pattern_obj.search(processed_block, last_span_end)
 		implicit_attrs = FMAttributes()
 		implicit_attrs.classes.append(FMAttributes.implicit_class)
+		incepted_wrapper_attrs = FMAttributes()
+		incepted_wrapper_attrs.classes.append(FMAttributes.incepted_wrapper_class)
 		
 		while span_match:
 			processed_span = ""
@@ -274,7 +277,7 @@ def convert(text):
 				# Reference number without bracketed span.
 				ref_num = span_match.group(3)
 				if incept:
-					processed_span = f'<span class="{FMAttributes.shared_class} reference reference-{ref_num}">{{{span_match.group(3)}}}</span>'
+					processed_span = f'<span{incepted_wrapper_attrs}><span class="{FMAttributes.shared_class} reference reference-{ref_num}">{{{span_match.group(3)}}}</span></span>'
 				else:
 					processed_span = f'<span class="{FMAttributes.shared_class} reference reference-{ref_num}">{ref_num}</span>'
 				
@@ -287,7 +290,7 @@ def convert(text):
 					css_class = marks_map[span_match.group(2)]
 				
 				if incept:
-					processed_span = f'<span class="{FMAttributes.shared_class} {css_class}">[</span><span{implicit_attrs}>{bracketed_text}</span><span class="{FMAttributes.shared_class} {css_class}">]{{{span_match.group(2)}}}</span>'
+					processed_span = f'<span{incepted_wrapper_attrs}><span class="{FMAttributes.shared_class} {css_class}">[</span><span{implicit_attrs}>{bracketed_text}</span><span class="{FMAttributes.shared_class} {css_class}">]{{{span_match.group(2)}}}</span></span>'
 				else:
 					processed_span = f'<span class="{FMAttributes.shared_class} {css_class}">{bracketed_text}</span>'
 				
@@ -296,7 +299,7 @@ def convert(text):
 				span_attrs = FMAttributes(span_match.group(2))
 				span_attrs.classes.append(FMAttributes.attributed_class)
 				if incept:
-					processed_span = f'<span{span_attrs}>[</span><span{implicit_attrs}>{bracketed_text}</span><span{span_attrs}>]{{{span_match.group(2)}}}</span>'
+					processed_span = f'<span{incepted_wrapper_attrs}><span{span_attrs}>[</span><lMspan{implicit_attrs}>{bracketed_text}</span><span{span_attrs}>]{{{span_match.group(2)}}}</span></span>'
 				else:
 					processed_span = f'<span{span_attrs}>{bracketed_text}</span>'
 				
@@ -317,7 +320,7 @@ def convert(text):
 						css_class = marks_map[mark_type]
 					
 					if incept:
-						processed_span = f'<span{implicit_attrs}>{mark_text}</span><span class="{FMAttributes.shared_class} {css_class}">{{{mark_type}}}</span>'
+						processed_span = f'<span{incepted_wrapper_attrs}><span{implicit_attrs}>{mark_text}</span><span class="{FMAttributes.shared_class} {css_class}">{{{mark_type}}}</span></span>'
 					else:
 						processed_span = f'<span class="{FMAttributes.shared_class} {css_class} {FMAttributes.implicit_class}">{mark_text}</span>'
 				else:
@@ -325,7 +328,7 @@ def convert(text):
 					span_attrs = FMAttributes(mark_type)
 					span_attrs.classes.append(FMAttributes.attributed_class)
 					if incept:
-						processed_span = f'<span{implicit_attrs}>{mark_text}</span><span{span_attrs}>{{{mark_type}}}</span>'
+						processed_span = f'<span{incepted_wrapper_attrs}><span{implicit_attrs}>{mark_text}</span><span{span_attrs}>{{{mark_type}}}</span></span>'
 					else:
 						span_attrs.classes.append(FMAttributes.implicit_class)
 						processed_span = f'<span{span_attrs}>{mark_text}</span>'
