@@ -185,8 +185,8 @@ def string_to_slug(text):
 def convert(text):
 	fm_globals_pattern = r"(?mi)^(?:\{figure(?:mark)?\s*([^\}]*)\})\s*?$"
 	figure_block_pattern = r"(?mi)(?<!<!--\n)^(`{3,}|~{3,})\s*figure(?:mark)?(\s+[^\{]+?)?\s*(?:\{([^\}]*?)\})?\s*$\n([\s\S\n]*?)\n\1\s*?$"
-	figure_span_pattern = r"(?<!\\)\[(.+?)(?<!\\)\]\{([^\}]+?)\}|\{(\d[\d.-]*)\}|([^\s\[\{]+)\{([^\d\}]+)\}"
-	associative_pattern = r"((&lt;.*?&gt;|\(.*?\)|‘.*?’|“.*?”|\\\[.*?\\\]|\{.*?\})|([^\w\s\]\}])(.*?)\8)\{([^\}]+)\}" # must be |-appended to figure_span_pattern
+	figure_span_pattern = r"(?<!\\)\[(.+?)(?<!\\)\]\{([^\}<]+?)\}|\{(\d[\d.-]*)\}|([^\s\[\{]+)\{([^\d\}<]+)\}"
+	associative_pattern = r"((&lt;.*?&gt;|\(.*?\)|‘.*?’|“.*?”|\\\[.*?\\\]|\{.*?\})|([^\w\s\]\}])(.*?)\8)\{([^\}<]+)\}" # must be |-appended to figure_span_pattern
 	
 	marks_map = {	"+": "insert",
 								"-": "remove",
@@ -205,8 +205,8 @@ def convert(text):
 		block_title = block_match.group(2)
 		if block_title:
 			block_title = block_title.strip()
-		block_attributes = block_match.group(3) 
-		processed_block = display_encode(block_match.group(4))
+		block_attributes = block_match.group(3)
+		processed_block = block_match.group(4)
 		
 		# Sync figure number with any intervening non-FigureMark figures.
 		other_figures = re.findall(r"(?sm)<figure[^>]*>.+?</figure>", text[last_fig_end:block_match.start()])
@@ -260,6 +260,9 @@ def convert(text):
 		
 		incept = (process_mode == "incept")
 		incept_span = f'<span class="{FMAttributes.shared_class} highlight">'
+		
+		if incept or encode_html:
+			processed_block = display_encode(processed_block)
 		
 		if associative_spans:
 			figure_span_pattern += r'|' + associative_pattern

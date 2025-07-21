@@ -219,8 +219,8 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 		
 		fm_globals_pattern = /^(?:\{figure(?:mark)?\s*([^\}]*)\})\s*?$/mi
 		figure_block_pattern = /(?<!<!--\n)^(`{3,}|~{3,})\s*figure(?:mark)?(\s+[^\{]+?)?\s*(?:\{([^\}]*?)\})?\s*$\n([\s\S\n]*?)\n\1\s*?$/mi
-		figure_span_pattern = /(?<!\\)\[(.+?)(?<!\\)\]\{([^\}]+?)\}|\{(\d[\d.-]*)\}|([^\s\[\{]+)\{([^\d\}]+)\}/
-		associative_pattern = /(?<!\\)\[(.+?)(?<!\\)\]\{([^\}]+?)\}|\{(\d[\d.-]*)\}|([^\s\[\{]+)\{([^\d\}]+)\}|((&lt;.*?&gt;|\(.*?\)|‘.*?’|“.*?”|\\\[.*?\\\]|\{.*?\})|([^\w\s\]\}])(.*?)\8)\{([^\}]+)\}/
+		figure_span_pattern = /(?<!\\)\[(.+?)(?<!\\)\]\{([^\}<]+?)\}|\{(\d[\d.-]*)\}|([^\s\[\{]+)\{([^\d\}<]+)\}/
+		associative_pattern = /(?<!\\)\[(.+?)(?<!\\)\]\{([^\}<]+?)\}|\{(\d[\d.-]*)\}|([^\s\[\{]+)\{([^\d\}<]+)\}|((&lt;.*?&gt;|\(.*?\)|‘.*?’|“.*?”|\\\[.*?\\\]|\{.*?\})|([^\w\s\]\}])(.*?)\8)\{([^\}<]+)\}/
 		
 		marks_map = {
 			"+" => "insert",
@@ -241,8 +241,8 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 		while block_match
 			block_title = block_match[2] ? block_match[2].strip : ""
 			block_attributes = block_match[3]
-			processed_block = display_encode(block_match[4])
-	
+			processed_block = block_match[4]
+			
 			other_figures = text[last_fig_end...block_match.begin(0)].to_s.scan(/<figure[^>]*>.+?<\/figure>/m)
 			figure_number += other_figures.length
 			figure_number += 1
@@ -290,6 +290,10 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 			
 			incept = (process_mode == "incept")
 			incept_span = %Q{<span class="#{FMAttributes::SHARED_CLASS} highlight">}
+			
+			if incept || encode_html
+				processed_block = display_encode(processed_block)
+			end
 			
 			span_pattern_obj = figure_span_pattern
 			if associative_spans
