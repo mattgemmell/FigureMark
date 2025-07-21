@@ -294,6 +294,9 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 			
 			last_span_end = 0
 			span_match = span_pattern_obj.match(processed_block, last_span_end)
+			implicit_attrs = FMAttributes.new()
+			implicit_attrs.classes << FMAttributes::IMPLICIT_CLASS
+			
 			while span_match
 				processed_span = ""
 				bracketed_text = span_match[1] || ""
@@ -316,7 +319,7 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 					end
 					
 					if incept
-						processed_span = %Q{<span class="#{FMAttributes::SHARED_CLASS} #{css_class}">[</span>#{bracketed_text}<span class="#{FMAttributes::SHARED_CLASS} #{css_class}">]{#{span_match[2]}}</span>}
+						processed_span = %Q{<span class="#{FMAttributes::SHARED_CLASS} #{css_class}">[</span><span#{implicit_attrs}>#{bracketed_text}</span><span class="#{FMAttributes::SHARED_CLASS} #{css_class}">]{#{span_match[2]}}</span>}
 					else
 						processed_span = %Q{<span class="#{FMAttributes::SHARED_CLASS} #{css_class}">#{bracketed_text}</span>}
 					end
@@ -324,12 +327,12 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 					span_attrs = FMAttributes.new(span_match[2])
 					span_attrs.classes << FMAttributes::ATTRIBUTED_CLASS
 					if incept
-						processed_span = %Q{<span#{span_attrs}>[</span>#{bracketed_text}<span#{span_attrs}>]{#{span_match[2]}}</span>}
+						processed_span = %Q{<span#{span_attrs}>[</span><span#{implicit_attrs}>#{bracketed_text}</span><span#{span_attrs}>]{#{span_match[2]}}</span>}
 					else
 						processed_span = %Q{<span#{span_attrs}>#{bracketed_text}</span>}
 					end
 				elsif span_match[5] || (associative_spans && span_match[10])
-					# Implicit or associative span.
+					# Implicit or implicit-associative span.
 					mark_type = span_match[5]
 					mark_text = span_match[4]
 					if associative_spans && span_match[10]
@@ -347,8 +350,6 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 						end
 						
 						if incept
-							implicit_attrs = FMAttributes.new()
-							implicit_attrs.classes << FMAttributes::IMPLICIT_CLASS
 							processed_span = %Q{<span#{implicit_attrs}>#{mark_text}</span><span class="#{FMAttributes::SHARED_CLASS} #{css_class}">{#{mark_type}}</span>}
 						else
 							processed_span = %Q{<span class="#{FMAttributes::SHARED_CLASS} #{css_class} #{FMAttributes::IMPLICIT_CLASS}">#{mark_text}</span>}
@@ -358,8 +359,6 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 						span_attrs = FMAttributes.new(mark_type)
 						span_attrs.classes << FMAttributes::ATTRIBUTED_CLASS
 						if incept
-							implicit_attrs = FMAttributes.new()
-							implicit_attrs.classes << FMAttributes::IMPLICIT_CLASS
 							processed_span = %Q{<span#{implicit_attrs}>#{mark_text}</span><span#{span_attrs}>{#{mark_type}}</span>}
 						else
 							span_attrs.classes << FMAttributes::IMPLICIT_CLASS
