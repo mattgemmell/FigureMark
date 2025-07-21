@@ -14,9 +14,10 @@ class FMAttributes:
 	retain_block = "retain-block"
 	process_mode = "process-mode"
 	incept_block = "incept-block"
-	associative_spans = "associative-spans",
-	numeric_ids = "numeric-ids",
+	associative_spans = "associative-spans"
+	numeric_ids = "numeric-ids"
 	mark_types = "mark-types"
+	encode_html = "encode-html"
 	
 	known_directives = {
 		fig_num_format,
@@ -28,7 +29,8 @@ class FMAttributes:
 		incept_block,
 		associative_spans,
 		numeric_ids,
-		mark_types
+		mark_types,
+		encode_html
 	}
 	
 	# Magic
@@ -247,6 +249,7 @@ def convert(text):
 		associative_spans = (attrs.directives.get(FMAttributes.associative_spans, "true") == "true")
 		numeric_ids = (attrs.directives.get(FMAttributes.numeric_ids, "false") == "true")
 		mark_types = attrs.directives.get(FMAttributes.mark_types, {})
+		encode_html = (attrs.directives.get(FMAttributes.encode_html, "true") == "true")
 		
 		if not attrs.tag_id:
 			# ID not specified either globally or as a local override. Use defaults.
@@ -388,6 +391,8 @@ def convert(text):
 		
 		# Remove escaping backslashes from brackets and braces (and from literal backslashes).
 		processed_block = re.sub(r"(?<!\\)\\([\[\]\{\}\\])", r"\1", processed_block)
+		if not incept and not encode_html:
+			processed_block = display_decode(processed_block)
 		processed_block = f"<div class=\"figure-content\">{processed_block}</div>"
 		
 		# Assemble a suitable pre-formatted figure block.

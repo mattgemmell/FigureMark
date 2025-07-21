@@ -18,6 +18,7 @@ class FMAttributes
   ASSOCIATIVE_SPANS = "associative-spans"
   NUMERIC_IDS = "numeric-ids"
   MARK_TYPES = "mark-types"
+  ENCODE_HTML = "encode-html"
 
   KNOWN_DIRECTIVES = Set[
     FIG_NUM_FORMAT,
@@ -29,7 +30,8 @@ class FMAttributes
     INCEPT_BLOCK,
     ASSOCIATIVE_SPANS,
     NUMERIC_IDS,
-    MARK_TYPES
+    MARK_TYPES,
+    ENCODE_HTML
   ]
 
   # Magic
@@ -275,6 +277,7 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 			associative_spans = (attrs.directives.fetch(FMAttributes::ASSOCIATIVE_SPANS, "true") == "true")
 			numeric_ids = (attrs.directives.fetch(FMAttributes::NUMERIC_IDS, "false") == "true")
 			mark_types = attrs.directives.fetch(FMAttributes::MARK_TYPES, {})
+			encode_html = (attrs.directives.fetch(FMAttributes::ENCODE_HTML, "true") == "true")
 			
 			if !attrs.tag_id
 				# ID not specified either globally or as a local override. Use defaults.
@@ -426,6 +429,9 @@ Jekyll::Hooks.register [:documents, :pages], :pre_render do |doc|
 			processed_block = processed_lines
 	
 			processed_block = processed_block.gsub(/(?<!\\)\\([\[\]\{\}\\])/, '\1')
+			if !incept && !encode_html
+				processed_block = display_decode(processed_block)
+			end
 			processed_block = %Q{<div class="figure-content">#{processed_block}</div>}
 	
 			if !block_title.empty? || empty_captions
