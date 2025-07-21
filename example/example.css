@@ -318,28 +318,28 @@ figure.quotation .insert {
 	text-underline-offset: 0.2rem;
 }
 
-.incept .implicit:has(+ .highlight) {
+.incept span.figuremark.implicit:has(+ .highlight) {
 	text-decoration-color: #06f;
 }
 
-.incept .implicit:has(+ .insert) {
+.incept span.figuremark.implicit:has(+ .insert) {
 	text-decoration-color: green;
 }
 
-.incept .implicit:has(+ .remove) {
+.incept span.figuremark.implicit:has(+ .remove) {
 	text-decoration-color: red;
 }
 
-.incept .implicit:has(+ .comment) {
+.incept span.figuremark.implicit:has(+ .comment) {
 	text-decoration-color: #999;
 }
 
-.incept .implicit:has(+ .result) {
+.incept span.figuremark.implicit:has(+ .result) {
 	text-decoration-color: #444;
 	background-color: #eee;
 }
 
-.incept .implicit:has(+ .attributed) {
+.incept span.figuremark.implicit:has(+ .attributed) {
 	text-decoration-color: mediumorchid;
 }
 
