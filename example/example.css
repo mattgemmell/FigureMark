@@ -48,12 +48,14 @@ figure > * {
 	margin: 0 auto;
 }
 
-.figure-content {
+figure .figure-content {
 	text-align; left;
 	white-space: pre;
 	hyphens: none;
 	overflow-x: auto;
 	overflow-y: hidden;
+	tab-size: 2;
+	line-height: 1.5rem;
 }
 
 figcaption {
@@ -85,7 +87,7 @@ figure.example {
 }
 
 figure.example .line {
-	min-height: 2rem;
+	min-height: 1.5rem;
 }
 
 figure.example, figure.example figcaption {
