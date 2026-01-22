@@ -428,3 +428,18 @@ figure.example:not(.incept) .line:has(> .reference) {
 		text-decoration-thickness: 0.1rem;
 	}
 }
+
+@media print {
+	
+	figure .figure-content {
+		line-height: 12.5pt;
+	}
+	
+	figure.example .line {{
+		min-height: 1rem;
+	}
+	
+	.result {
+		margin: 0;
+	}	
+}
