@@ -20,21 +20,6 @@ li {
 	margin-top: 0.5rem;
 }
 
-hr {
-	margin: 1.5rem auto;
-	background-color: transparent;
-	border-bottom: 3px solid var(--figuremark);
-	width: 50%;
-}
-
-hr:after {
-	content: "";
-}
-
-hr, hr:after {
-	height: 2.5rem;
-}
-
 figure {
 	break-inside: avoid;
 	text-align: left;
